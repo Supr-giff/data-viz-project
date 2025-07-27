@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pakistani cities</title>
+
+        <!--Leaflet css-->
+        <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+        />
+        
+        <!--Leaflet js-->
+        <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+        ></script>
+        
+        <!--PapaParse-->
+        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js"></script>
+        
+        <style>
+        body, html {height: 100%; margin: 0; padding: 0;}
+        
+        #map {width: 100%; height: 100vh; position: absolute;}
+        
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        
+        <script>
+        // Initialize the map
+        const map = L.map("map").setView([30, 70], 4);
+        // Add OpenStreetMap tiles
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+        }).addTo(map);
+        
+        function pakistanCityInfo(data) {
+            data.forEach((row) => {
+                const city = row["City"];
+                const lat = parseFloat(row["Latitude"]);
+                const lon = parseFloat(row["Longitude"]);
+                const province = row["Province"];
+                const population = row["Population"];
+
+                const numPopulation = !isNaN(population) ? Number(population).toLocaleString("en-US") : "Unknown"; // converting string into numbers and using "," to seperate number
+                if (!city || isNaN(lat) || isNaN(lon)) return;
+                
+                const displayContent = `
+                <strong>${city}</strong><br>
+                Province: ${province || "N/A"}<br>
+                Population: ${numPopulation}
+                `;
+
+                // Capital city in RED color
+                if(city.trim().toLowerCase() ==="islamabad"){
+                    L.circleMarker([lat, lon], {
+                        radius: 10,
+                        color: "red",
+                        fillColor: "red",
+                        fillOpacity: 0.5,
+                    })
+                    .addTo(map)
+                    .bindPopup(displayContent);
+                }
+                    // Cities greater than 3 million of population in blue circle, less than in green and cities with marker
+                    else if(population > 3000000){
+                        L.circleMarker([lat, lon], {
+                            radius: 10,
+                            color: "blue",
+                            fillColor: "blue",
+                            fillOpacity: 0.5,
+                        })
+                        .addTo(map)
+                        .bindPopup(displayContent);
+
+                    }
+                    else if(population < 50000){
+                        L.circleMarker([lat, lon], {
+                            radius: 10,
+                            color: "green",
+                            fillColor: "green",
+                            fillOpacity: 0.5,
+                        })
+                        .addTo(map)
+                        .bindPopup(displayContent);
+                    }
+                    else {
+                        L.marker([lat, lon])
+                        .addTo(map)
+                        .bindPopup(displayContent);
+                    }
+                });
+            }
+            fetch("cities_in_pakistan.csv")
+            .then((response) => response.text())
+            .then((csvText) => {
+                const parsed = Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                });
+                pakistanCityInfo(parsed.data); // Pass parsed data to map function
+                })
+                .catch((error) => console.error("Error fetching CSV:", error));
+            </script>
+        
+    </body>
+</html>
